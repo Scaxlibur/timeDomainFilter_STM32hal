@@ -1,7 +1,7 @@
 #include "timeDomainFilter.h"
 
 /**
- * @brief 比较函数，用于qsort函数
+ * @brief 比较函数，用于qsort函数调用
  * @param e1 第一个元素
  * @param e2 第二个元素
  * @return 比较结果
@@ -21,6 +21,8 @@ int cmp_float(const void* e1, const void* e2)
  * @param getValue 需要滤波的数组
  * @param amp 限幅值
  * @param array_size 数组大小
+ * @note 优点:能有效克服因偶然因素引起的脉冲干扰
+ * @note 缺点:无法抑制那种周期性的干扰,平滑度差
  */
 void amplitudeLimitingFilter(float* getValue, float amp, uint16_t array_size)
 {
@@ -38,6 +40,8 @@ void amplitudeLimitingFilter(float* getValue, float amp, uint16_t array_size)
  * @brief 中位值滤波法
  * @param samples Input data array
  * @param array_size Size of input array
+ * @note 优点：能有效克服因偶然因素引起的波动干扰，对温度、液位的变化缓慢的被测参数有良好的滤波效果
+ * @note 缺点：对流量、速度等快速变化的参数不宜
  */
  float medianValueFilter(float* samples, uint16_t array_size)
  {
@@ -62,6 +66,8 @@ void amplitudeLimitingFilter(float* getValue, float amp, uint16_t array_size)
  * @param samples Input data array
  * @param array_size Valid data length (must > 0)
  * @return Filtered average value (NAN when invalid)
+ * @note 优点：适用于对一般具有随机干扰的信号进行滤波,这样信号的特点是有一个平均值，信号在某一数值范围附近上下波动
+ * @note 缺点：对于测量速度较慢或要求数据计算速度较快的实时控制不适用,比较浪费RAM 
  */
  float arithmeticAverageFilter(float* samples, uint16_t array_size)
  {
@@ -78,6 +84,17 @@ void amplitudeLimitingFilter(float* getValue, float amp, uint16_t array_size)
 /**
  * @brief 几何平均滤波法
  * @param samples Input data array
+ * @param array_size Valid data length (must > 0)
+ * @note 优点：
+            1. 抗干扰能力强：对异常值不敏感，能有效抑制少数极端数据点的影响
+            2. 适合特定数据分布：对呈几何级数或对数分布的数据（如光强、声压等）能提供更准确的趋势反映
+            4. 最适合用于处理呈指数特征变化的传感器数据
+            5. 适用于对异常值敏感但实时性要求不高的监测系统
+ * @note 缺点：
+            1. 计算复杂度高：涉及乘法和开方运算，消耗较多CPU资源
+            2. 数值限制：不能处理零值和负值，否则会导致结果无效
+            3. 实现难度大：在定点数系统中容易溢出，且引入量化误差
+            4. 实时性差：相比简单滤波算法需要更长的计算时间
  */
  float geometricMeanFilter(float* samples, uint16_t array_size)
  {
@@ -93,7 +110,7 @@ void amplitudeLimitingFilter(float* getValue, float amp, uint16_t array_size)
      }
      
      if(valid_count == 0) return NAN; // 全无效数据保护
-     return pow(product, 1.0 / valid_count); // 修正为有效数据计数
+     return pow(product, 1.0 / valid_count);
  }
  
 /**
@@ -101,6 +118,8 @@ void amplitudeLimitingFilter(float* getValue, float amp, uint16_t array_size)
  * @param data_buffer Input data array
  * @param a Filter coefficient (0 ≤ a ≤ 1)
  * @param array_size Size of input array
+ * @note 优点：对周期性干扰具有良好的抑制作用，适用于波动频率较高的场合
+ * @note 缺点：相位滞后，灵敏度低; 滞后程度取决于a值大小; 不能消除滤波频率高于采样频率的1/2的干扰信号
  */
  float firstOrderLagFilter(float* data_buffer, float a, uint16_t array_size)
  {
@@ -119,6 +138,8 @@ void amplitudeLimitingFilter(float* getValue, float amp, uint16_t array_size)
  * @param data_buffer Pointer to data array
  * @param window_size Size of moving window
  * @param array_size Total size of input array
+ * @note 优点：对周期性干扰有良好的抑制作用，平滑度高;适用于高频振荡的系统
+ * @note 缺点：灵敏度低,对偶然出现的脉冲性干扰的抑制作用较差,不易消除由于脉冲干扰所引起的采样值偏差,不适用于脉冲干扰比较严重的场合,比较浪费RAM
  */
 float recursiveMovingAverageFilter(float* data_buffer, uint16_t window_size, uint16_t array_size)
 {
@@ -146,6 +167,8 @@ float recursiveMovingAverageFilter(float* data_buffer, uint16_t window_size, uin
  * @param amp Amplitude limit value
  * @param window_size Moving average window size
  * @param array_size Total size of input array
+ * @note 优点：融合了两种滤波法的优点,对于偶然出现的脉冲性干扰，可消除由于脉冲干扰所引起的采样值偏差
+ * @note 缺点：比较浪费RAM
  */
 float amplitudeLimitedMovingAverage(float* data_buffer, float amp, uint16_t window_size, uint16_t array_size)
 {
@@ -182,6 +205,8 @@ float amplitudeLimitedMovingAverage(float* data_buffer, float amp, uint16_t wind
  * @param samples Input data array
  * @param threshold Counter threshold (N)
  * @param array_size Size of input array
+ * @note 优点：对于变化缓慢的被测参数有较好的滤波效果，可避免在临界值附近控制器的反复开/关跳动或显示器上数值抖动
+ * @note 缺点：对于快速变化的参数不宜,如果在计数器溢出的那一次采样到的值恰好是干扰值，则会将干扰值当作有效值导入交易系统
  */
 float debounceFilter(float* samples, uint16_t threshold, uint16_t array_size)
 {
