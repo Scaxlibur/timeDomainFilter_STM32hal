@@ -206,7 +206,7 @@ float amplitudeLimitedMovingAverage(float* data_buffer, float amp, uint16_t wind
  * @param threshold Counter threshold (N)
  * @param array_size Size of input array
  * @note 优点：对于变化缓慢的被测参数有较好的滤波效果，可避免在临界值附近控制器的反复开/关跳动或显示器上数值抖动
- * @note 缺点：对于快速变化的参数不宜,如果在计数器溢出的那一次采样到的值恰好是干扰值，则会将干扰值当作有效值导入交易系统
+ * @note 缺点：对于快速变化的参数不宜,如果在计数器溢出的那一次采样到的值恰好是干扰值，则会将干扰值当作有效值导入系统
  */
 float debounceFilter(float* samples, uint16_t threshold, uint16_t array_size)
 {
