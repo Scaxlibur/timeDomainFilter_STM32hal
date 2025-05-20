@@ -20,10 +20,10 @@ int cmp_float(const void* e1, const void* e2)
  * @brief 限幅滤波法（又称程序判断滤波法）
  * @param getValue 需要滤波的数组
  * @param amp 限幅值
+ * @param array_size 数组大小
  */
-amplitudeLimitingFilter(float* getValue, float amp)
+void amplitudeLimitingFilter(float* getValue, float amp, uint16_t array_size)
 {
-    uint16_t array_size = sizeof(getValue)/sizeof(float);
     float lastValue = getValue[0];
     for (uint16_t i = 0; i < array_size; i++)
     {
@@ -36,40 +36,52 @@ amplitudeLimitingFilter(float* getValue, float amp)
 
 /**
  * @brief 中位值滤波法
- * @param getValue 需要滤波的数组
- * @param N 采样窗口大小
+ * @param samples Input data array
+ * @param array_size Size of input array
  */
-float medianValueFilter(float* getValue)
-{
-    uint16_t array_size = sizeof(getValue)/sizeof(float);
-    uint16_t medianIndex = (array_size - 1) / 2;
-    qsort(getValue, array_size, sizeof(float), cmp_float);
-    return getValue[medianIndex]; // 返回排序后中位值
-}
-
+ float medianValueFilter(float* samples, uint16_t array_size)
+ {
+     if(array_size == 0) return NAN;  // 新增空数组校验
+     
+     // 创建临时数组避免修改原始数据
+     float* temp = (float*)malloc(array_size * sizeof(float));
+     memcpy(temp, samples, array_size * sizeof(float));
+     
+     qsort(temp, array_size, sizeof(float), cmp_float);
+     uint16_t median_index = (array_size % 2 == 0) ? 
+                           (array_size/2 - 1) :    // 偶数取前中位数
+                           (array_size - 1)/2;      // 奇数取中位数
+     
+     float result = temp[median_index];
+     free(temp);
+     return result;
+ }
+ 
 /**
  * @brief 算术平均滤波法
- * @param getValue 需要滤波的数组
-*/
-float arithmeticAverageFilter(float* getValue)
-{
-    uint16_t array_size = sizeof(getValue)/sizeof(float);
-    float sum = 0;
-    for (uint16_t i = 0; i < array_size; i++)
-    {
-        sum += getValue[i];
-    }
-    return sum / array_size; // 返回平均值
-}
+ * @param samples Input data array
+ * @param array_size Valid data length (must > 0)
+ * @return Filtered average value (NAN when invalid)
+ */
+ float arithmeticAverageFilter(float* samples, uint16_t array_size)
+ {
+     if(array_size == 0 || samples == NULL) return NAN;
+     
+     double sum = 0.0;
+     for(uint16_t i = 0; i < array_size; i++)
+     {
+         sum += (double)samples[i];
+     }
+     return (float)(sum / array_size); // 最终结果转回float
+ }
 
 /**
  * @brief 几何平均滤波法
  * @param samples Input data array
  */
- float geometricMeanfilter(float* samples)
+ float geometricMeanFilter(float* samples, uint16_t array_size)
  {
-     uint16_t array_size = sizeof(samples)/sizeof(float);
-     if(array_size == 0) return 0;  // 新增空数组校验
+     if(array_size == 0) return NAN;  // 新增空数组校验
      double product = 1.0;
      uint16_t valid_count = 0;
      
@@ -80,7 +92,7 @@ float arithmeticAverageFilter(float* getValue)
          valid_count++;
      }
      
-     if(valid_count == 0) return 0; // 全无效数据保护
+     if(valid_count == 0) return NAN; // 全无效数据保护
      return pow(product, 1.0 / valid_count); // 修正为有效数据计数
  }
  
@@ -90,10 +102,9 @@ float arithmeticAverageFilter(float* getValue)
  * @param a Filter coefficient (0 ≤ a ≤ 1)
  * @param array_size Size of input array
  */
- float firstOrderLagFilter(float* data_buffer, float a)
+ float firstOrderLagFilter(float* data_buffer, float a, uint16_t array_size)
  {
-     uint16_t array_size = sizeof(data_buffer)/sizeof(float);
-     if(a < 0 || a > 1) return 0;  // 参数校验
+     if(a < 0 || a > 1) return NAN;  // 参数校验
      float filtered_value = data_buffer[0];
      
      for(uint16_t i = 1; i < array_size; i++)  // 从第二个元素开始
@@ -109,13 +120,12 @@ float arithmeticAverageFilter(float* getValue)
  * @param window_size Size of moving window
  * @param array_size Total size of input array
  */
-float recursiveMovingAverageFilter(float* data_buffer, uint16_t window_size)
+float recursiveMovingAverageFilter(float* data_buffer, uint16_t window_size, uint16_t array_size)
 {
     float sum = 0;
-    uint16_t array_size = sizeof(data_buffer)/sizeof(float);
     // 检查窗口大小是否有效
     if (window_size <= 0 || window_size > array_size)   
-        return 0;
+        return NAN;
     // 初始化窗口求和
     for(uint16_t i=0; i<window_size; i++){
         sum += data_buffer[i];
@@ -137,13 +147,11 @@ float recursiveMovingAverageFilter(float* data_buffer, uint16_t window_size)
  * @param window_size Moving average window size
  * @param array_size Total size of input array
  */
-float amplitudeLimitedMovingAverage(float* data_buffer, float amp, uint16_t window_size)
+float amplitudeLimitedMovingAverage(float* data_buffer, float amp, uint16_t window_size, uint16_t array_size)
 {
-    uint16_t array_size = sizeof(data_buffer)/sizeof(float);
-    if(array_size < window_size || window_size == 0) return 0;
+    if(array_size < window_size || window_size == 0) return NAN;
     
     float sum = 0;
-    uint16_t valid_count = 0;
     float prev_value = data_buffer[0];
     
     // 限幅预处理
@@ -175,9 +183,8 @@ float amplitudeLimitedMovingAverage(float* data_buffer, float amp, uint16_t wind
  * @param threshold Counter threshold (N)
  * @param array_size Size of input array
  */
-float debounce_filter(float* samples, uint16_t threshold)
+float debounceFilter(float* samples, uint16_t threshold, uint16_t array_size)
 {
-    uint16_t array_size = sizeof(samples)/sizeof(float);
     if(array_size == 0 || threshold == 0) return NAN;
     
     static uint16_t counter = 0;      // 消抖计数器

@@ -6,13 +6,13 @@
 #include "arm_math.h"
 
 int cmp_float(const void* e1, const void* e2);
-void amplitude_limiting_filter(float* getValue, float amp);
-float medianValueFilter(float* getValue);
-float arithmeticAverageFilter(float* getValue);
-float geometricMeanfilter(float* samples);
-float firstOrderLagFilter(float* data_buffer, float a);
-float recursiveMovingAverageFilter(float* data_buffer, uint16_t window_size);
-float amplitudeLimitedMovingAverage(float* data_buffer, float amp, uint16_t window_size);
-float debounce_filter(float* samples, uint16_t threshold);
+void amplitudeLimitingFilter(float* getValue, float amp, uint16_t array_size);
+float medianValueFilter(float* samples, uint16_t array_size);
+float arithmeticAverageFilter(float* samples, uint16_t array_size);
+float geometricMeanFilter(float* samples, uint16_t array_size);
+float firstOrderLagFilter(float* data_buffer, float a, uint16_t array_size);
+float recursiveMovingAverageFilter(float* data_buffer, uint16_t window_size, uint16_t array_size);
+float amplitudeLimitedMovingAverage(float* data_buffer, float amp, uint16_t window_size, uint16_t array_size);
+float debounceFilter(float* samples, uint16_t threshold, uint16_t array_size);
 
 #endif
