@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "bsp_spi_ad7606.h": "c",
+        "stdint.h": "c",
+        "stm32f4xx_hal.h": "c",
+        "main.h": "c",
+        "cstdint": "cpp",
+        "tim.h": "c",
+        "gpio.h": "c"
+    }
+}
