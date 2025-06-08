@@ -14,5 +14,7 @@ float firstOrderLagFilter(float* data_buffer, float a, uint16_t array_size);
 float recursiveMovingAverageFilter(float* data_buffer, uint16_t window_size, uint16_t array_size);
 float amplitudeLimitedMovingAverage(float* data_buffer, float amp, uint16_t window_size, uint16_t array_size);
 float debounceFilter(float* samples, uint16_t threshold, uint16_t array_size);
+void kalmanInit(KalmanFilter* kf, float init_x, float init_P, float process_noise, float measure_noise);
+float kalmanUpdate(KalmanFilter* kf, float samples);
 
 #endif
